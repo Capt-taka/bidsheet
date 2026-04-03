@@ -120,9 +120,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 print:p-0 print:bg-white" style={{ fontFamily: 'Calibri, Arial, sans-serif' }}>
       {/* Controls - Hidden on Print */}
-      <div className="max-w-4xl mx-auto mb-8 flex flex-wrap gap-4 items-center justify-between print:hidden">
-        <h1 className="text-2xl font-bold text-foreground">Bid Generator</h1>
-        <div className="flex gap-2">
+      <div className="max-w-4xl mx-auto mb-8 flex flex-wrap gap-4 items-center print:hidden">
+        <img src="/Default-Main-Page-logo.png" alt="Logo" className="h-16 object-contain" />
+        <h1 className="text-2xl font-bold text-foreground">Bid Sheet Form</h1>
+        <div className="flex gap-2 ml-auto">
           <Button variant="outline" size="icon" onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </Button>
@@ -478,6 +479,11 @@ export default function App() {
           }
         }
       `}</style>
+
+      {/* Disclaimer - Hidden on Print */}
+      <div className="print:hidden border-t border-border mt-[500px] py-4 px-4">
+        <p className="text-sm italic text-muted-foreground text-center">This application is intended for internal use only by Southeast Caissons (SEC) employees. Unauthorized access, use, or distribution is strictly prohibited.</p>
+      </div>
     </div>
   );
 }
