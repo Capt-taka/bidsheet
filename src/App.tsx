@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, Settings, Plus, Trash2, Upload, ChartNoAxesGantt, X, Moon, Sun, SquareKanban } from 'lucide-react';
+import { Printer, Settings, Plus, Trash2, Upload, ChartNoAxesGantt, X, Moon, Sun, SquareKanban, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +47,7 @@ export default function App() {
     if (stored !== null) return stored === 'true';
     return false; // Default to light mode
   });
+  const [draggedItem, setDraggedItem] = useState<BidItem | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -63,6 +64,29 @@ export default function App() {
 
   const handleUpdateItem = (id: string, field: keyof BidItem, value: string | number) => {
     setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const handleDragStart = (e: React.DragEvent, item: BidItem) => {
+    setDraggedItem(item);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, targetItem: BidItem) => {
+    e.preventDefault();
+    if (!draggedItem || draggedItem.id === targetItem.id) return;
+
+    const draggedIndex = items.findIndex(item => item.id === draggedItem.id);
+    const targetIndex = items.findIndex(item => item.id === targetItem.id);
+
+    const newItems = [...items];
+    newItems.splice(draggedIndex, 1);
+    newItems.splice(targetIndex, 0, draggedItem);
+
+    setItems(newItems);
+    setDraggedItem(null);
   };
 
   const total = items.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
@@ -229,7 +253,17 @@ export default function App() {
             
             <div className="space-y-3">
               {items.map((item) => (
-                <div key={item.id} className="flex flex-wrap md:flex-nowrap gap-2 p-3 bg-muted/50 rounded-lg group">
+                <div 
+                  key={item.id} 
+                  className="flex flex-wrap md:flex-nowrap gap-2 p-3 bg-muted/50 rounded-lg group cursor-move"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, item)}
+                >
+                  <div className="flex items-center pr-2">
+                    <GripVertical size={16} className="text-muted-foreground" />
+                  </div>
                   <Input
                     value={item.description}
                     onChange={(e) => handleUpdateItem(item.id, 'description', e.target.value)}
