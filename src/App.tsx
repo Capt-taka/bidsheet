@@ -275,6 +275,16 @@ export default function App() {
           </div>
         </div>
 
+        {/* Total Card - Hidden on Print */}
+        <div className="print:hidden w-full md:w-64 shrink-0">
+          <div className="bg-card p-6 rounded-xl shadow-sm border border-border sticky top-8">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Bid Total</p>
+            <p className="text-3xl font-bold text-foreground">
+              ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+
         {/* Print-only document (no on-screen preview) */}
         <div className="hidden print:block w-full">
           <div 
