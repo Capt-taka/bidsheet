@@ -1,9 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Printer, 
   Settings, 
@@ -15,8 +10,6 @@ import {
   Save,
   RefreshCw
 } from 'lucide-react';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { cn } from './lib/utils';
 
 interface BidItem {
@@ -44,234 +37,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   companyName: 'SOUTHEAST CAISSONS',
   companyAddress: 'PO Box 574, Kernersville, NC 27285',
   companyContact: 'Office: (336) 510-5350',
-  companyWebsite: 'www.SoutheastCaissons.com'
-};
-
-// PDF Generation Function
-const generateBidPDF = (
-  items: BidItem[],
-  project: string,
-  bidDate: string,
-  settings: AppSettings,
-  total: number
-) => {
-  const filteredItems = items.filter(
-    item => item.description.trim() !== '' || item.quantity > 0 || item.rate > 0
-  );
-  const rowsPerPage = 10;
-  const pages = Array.from(
-    { length: Math.max(1, Math.ceil(filteredItems.length / rowsPerPage)) },
-    (_, pageIndex) => {
-      const start = pageIndex * rowsPerPage;
-      const end = start + rowsPerPage;
-      return filteredItems.slice(start, end);
-    }
-  );
-
-  // Create page content for each page
-  const pageContents = pages.map((pageRows, pageIndex) => {
-    const content: any[] = [];
-
-    // Add watermark using background
-    const pageContent: any = {
-      content: [],
-      margin: [40, 40, 40, 40],
-    };
-
-    // Add header only on first page
-    if (pageIndex === 0) {
-      // Skip logo image as pdfmake has trouble with local file URLs
-      // Logo can be added if converted to base64 data URI
-
-      pageContent.content.push({
-        text: settings.companyName,
-        fontSize: 24,
-        bold: true,
-        alignment: 'center',
-        margin: [0, 0, 0, 5],
-        font: 'Helvetica',
-      });
-
-      pageContent.content.push({
-        text: settings.companyAddress,
-        fontSize: 10,
-        alignment: 'center',
-        margin: [0, 0, 0, 3],
-        font: 'Helvetica',
-      });
-
-      pageContent.content.push({
-        text: settings.companyContact,
-        fontSize: 10,
-        alignment: 'center',
-        margin: [0, 0, 0, 3],
-        font: 'Helvetica',
-      });
-
-      pageContent.content.push({
-        text: settings.companyWebsite,
-        fontSize: 10,
-        alignment: 'center',
-        color: '0366d6',
-        margin: [0, 0, 0, 20],
-        font: 'Helvetica',
-      });
-
-      // Project Info
-      pageContent.content.push({
-        columns: [
-          {
-            width: 100,
-            text: 'Project:',
-            bold: true,
-            font: 'Helvetica',
-          },
-          {
-            text: project || '__________________________',
-            font: 'Helvetica',
-          },
-        ],
-        margin: [0, 0, 0, 10],
-      });
-
-      pageContent.content.push({
-        columns: [
-          {
-            width: 100,
-            text: 'Bid Date:',
-            bold: true,
-            font: 'Helvetica',
-          },
-          {
-            text: bidDate || '__________________________',
-            font: 'Helvetica',
-          },
-        ],
-        margin: [0, 0, 0, 20],
-      });
-    } else {
-      // Blank space on continuation pages
-      pageContent.content.push({ text: '', margin: [0, 60, 0, 20] });
-    }
-
-    // Create table rows
-    const tableRows: any[] = [
-      [
-        { text: 'Item', bold: true, alignment: 'left', font: 'Helvetica' },
-        { text: 'Quantity', bold: true, alignment: 'center', font: 'Helvetica' },
-        { text: 'Unit', bold: true, alignment: 'center', font: 'Helvetica' },
-        { text: '', bold: true, alignment: 'center', font: 'Helvetica' },
-        { text: 'Rate', bold: true, alignment: 'right', font: 'Helvetica' },
-        { text: 'Total', bold: true, alignment: 'right', font: 'Helvetica' },
-      ],
-    ];
-
-    // Add data rows
-    pageRows.forEach(item => {
-      tableRows.push([
-        { text: item.description, font: 'Helvetica' },
-        { text: item.quantity ? item.quantity.toString() : '', alignment: 'center', font: 'Helvetica' },
-        { text: item.unit, alignment: 'center', font: 'Helvetica' },
-        { text: '@', alignment: 'center', font: 'Helvetica' },
-        {
-          text: item.rate
-            ? `$ ${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            : '',
-          alignment: 'right',
-          font: 'Helvetica',
-        },
-        {
-          text:
-            item.quantity * item.rate
-              ? `$ ${(item.quantity * item.rate).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}`
-              : '',
-          alignment: 'right',
-          font: 'Helvetica',
-        },
-      ]);
-    });
-
-    // Add empty rows to fill the page
-    const emptyRowCount = Math.max(0, rowsPerPage - pageRows.length);
-    for (let i = 0; i < emptyRowCount; i++) {
-      tableRows.push(['', '', '', '', '', '']);
-    }
-
-    // Add total row on last page
-    if (pageIndex === pages.length - 1) {
-      tableRows.push([
-        '',
-        '',
-        '',
-        { text: 'Total', bold: true, alignment: 'center', fillColor: '#f3f3f3', font: 'Helvetica' },
-        { text: '', fillColor: '#f3f3f3', font: 'Helvetica' },
-        {
-          text: `$ ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          bold: true,
-          alignment: 'right',
-          fillColor: '#f3f3f3',
-          font: 'Helvetica',
-        },
-      ]);
-    }
-
-    // Add table
-    pageContent.content.push({
-      table: {
-        headerRows: 1,
-        widths: ['45%', '15%', '8%', '4%', '14%', '14%'],
-        body: tableRows,
-        style: 'tableStyle',
-      },
-      layout: {
-        hLineWidth: () => 1,
-        vLineWidth: () => 1,
-        hLineColor: '000000',
-        vLineColor: '000000',
-      },
-      margin: [0, 20, 0, 20],
-    });
-
-    // Add footer on every page
-    pageContent.content.push({
-      text: settings.footerText,
-      fontSize: 8,
-      italics: true,
-      alignment: 'center',
-      color: 'cc0000',
-      margin: [0, 20, 0, 0],
-      font: 'Helvetica',
-    });
-
-    return pageContent;
-  });
-
-  // Create document definition
-  const docDefinition: any = {
-    pageSize: 'A4',
-    pageMargins: 0,
-    content: pageContents,
-    styles: {
-      tableStyle: {
-        fontSize: 10,
-      },
-    },
-    defaultStyle: {
-      font: 'Helvetica',
-      fontSize: 10,
-    },
-  };
-
-  // Generate PDF
-  try {
-    pdfMake.createPdf(docDefinition).download(`bid-${project || 'document'}.pdf`);
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    alert('Error generating PDF. Check console for details.');
-  }
+  companyWebsite: 'www.southeastcaissons.com'
 };
 
 export default function App() {
@@ -289,15 +55,6 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
 
-  // Initialize pdfMake on component mount
-  useEffect(() => {
-    try {
-      (pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
-    } catch (err) {
-      console.error('Error initializing pdfMake:', err);
-    }
-  }, []);
-  
   const handleAddItem = () => {
     setItems([...items, { id: Math.random().toString(36).substr(2, 9), description: '', quantity: 0, unit: 'LF', rate: 0 }]);
   };
@@ -313,11 +70,7 @@ export default function App() {
   const total = items.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
 
   const handlePrint = () => {
-    if (!(pdfMake as any).vfs) {
-      alert('PDF library is initializing. Please try again in a moment.');
-      return;
-    }
-    generateBidPDF(items, project, bidDate, settings, total);
+    window.print();
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'watermark') => {
@@ -508,7 +261,7 @@ export default function App() {
                     value={item.description}
                     onChange={(e) => handleUpdateItem(item.id, 'description', e.target.value)}
                     placeholder="Description"
-                    className="flex-1 min-w-[200px] px-2 py-1 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none"
+                    className="flex-1 min-w-50 px-2 py-1 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none"
                   />
                   <div className="flex gap-2 items-center">
                     <input 
@@ -604,20 +357,21 @@ export default function App() {
                         {/* Project Info */}
                         <div className="mb-8 space-y-2">
                           <div className="flex gap-2">
-                            <span className="font-bold min-w-[80px]">Project:</span>
-                            <span className="border-b border-gray-400 flex-1 min-h-[1.5rem]">{project}</span>
+                            <span className="font-bold min-w-20">Project:</span>
+                            <span className="border-b border-gray-400 flex-1 min-h-6">{project}</span>
                           </div>
                           <div className="flex gap-2">
-                            <span className="font-bold min-w-[80px]">Bid Date:</span>
-                            <span className="border-b border-gray-400 flex-1 min-h-[1.5rem]">{bidDate}</span>
+                            <span className="font-bold min-w-20">Bid Date:</span>
+                            <span className="border-b border-gray-400 flex-1 min-h-6">{bidDate}</span>
                           </div>
                         </div>
                       </>
                     )}
 
                     {/* Table Container */}
-                    <div style={{ flex: pageIndex === 0 ? '1 1 auto' : '0 0 auto', display: 'flex', justifyContent: 'center', alignItems: pageIndex === 0 ? 'stretch' : 'center' }}>
-                      <div className="w-full" style={{ width: pageIndex === 0 ? '100%' : 'auto' }}>
+                    {pageIndex > 0 && <div style={{ height: '10mm' }} />}
+                    <div style={{ flex: '1 1 auto', display: 'flex' }}>
+                      <div className="w-full">
                       <table className="w-full border-collapse border border-black text-sm mb-4">
                         <thead>
                           <tr className="bg-gray-50">
