@@ -1,16 +1,9 @@
-import React, { useState } from 'react';
-import { 
-  Printer, 
-  Settings, 
-  Plus, 
-  Trash2, 
-  Upload, 
-  Image as ImageIcon,
-  Type,
-  Save,
-  RefreshCw
-} from 'lucide-react';
-import { cn } from './lib/utils';
+import React, { useState, useEffect } from 'react';
+import { Printer, Settings, Plus, Trash2, Upload, ChartNoAxesGantt, X, Moon, Sun, SquareKanban } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface BidItem {
   id: string;
@@ -42,18 +35,23 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 export default function App() {
   const [items, setItems] = useState<BidItem[]>([
-    { id: '1', description: '', quantity: 0, unit: 'LF', rate: 0 },
-    { id: '2', description: '', quantity: 0, unit: 'LF', rate: 0 },
-    { id: '3', description: '', quantity: 0, unit: 'LF', rate: 0 },
-    { id: '4', description: '', quantity: 0, unit: 'LF', rate: 0 },
-    { id: '5', description: '', quantity: 0, unit: 'LF', rate: 0 },
-    { id: '6', description: 'Mobilization', quantity: 1, unit: 'EA', rate: 0 },
+    { id: '1', description: '', quantity: 0, unit: '', rate: 0 },
   ]);
   
   const [project, setProject] = useState('');
   const [bidDate, setBidDate] = useState(new Date().toISOString().split('T')[0]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem('darkMode');
+    if (stored !== null) return stored === 'true';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('darkMode', String(darkMode));
+  }, [darkMode]);
 
   const handleAddItem = () => {
     setItems([...items, { id: Math.random().toString(36).substr(2, 9), description: '', quantity: 0, unit: 'LF', rate: 0 }]);
@@ -69,7 +67,15 @@ export default function App() {
 
   const total = items.reduce((acc, item) => acc + (item.quantity * item.rate), 0);
 
+  const [projectError, setProjectError] = useState(false);
+  const [bidDateError, setBidDateError] = useState(false);
+
   const handlePrint = () => {
+    const noProject = !project.trim();
+    const noDate = !bidDate.trim();
+    setProjectError(noProject);
+    setBidDateError(noDate);
+    if (noProject || noDate) return;
     window.print();
   };
 
@@ -88,120 +94,85 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8 print:p-0 print:bg-white" style={{ fontFamily: 'Calibri, Arial, sans-serif' }}>
+    <div className="min-h-screen bg-background p-4 md:p-8 print:p-0 print:bg-white" style={{ fontFamily: 'Calibri, Arial, sans-serif' }}>
       {/* Controls - Hidden on Print */}
       <div className="max-w-4xl mx-auto mb-8 flex flex-wrap gap-4 items-center justify-between print:hidden">
-        <h1 className="text-2xl font-bold text-gray-800">Bid Generator</h1>
+        <h1 className="text-2xl font-bold text-foreground">Bid Generator</h1>
         <div className="flex gap-2">
-          <button 
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-          >
+          <Button variant="outline" size="icon" onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </Button>
+          <Button variant="outline" onClick={() => setShowSettings(!showSettings)}>
             <Settings size={18} />
             Settings
-          </button>
-          <button 
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-          >
+          </Button>
+          <Button onClick={handlePrint}>
             <Printer size={18} />
             Print Bid
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Settings Panel - Hidden on Print */}
       {showSettings && (
-        <div className="max-w-4xl mx-auto mb-8 p-6 bg-white rounded-xl shadow-lg border border-gray-200 print:hidden animate-in fade-in slide-in-from-top-4">
+        <div className="max-w-4xl mx-auto mb-8 p-6 bg-card rounded-xl shadow-lg border border-border print:hidden animate-in fade-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Settings className="text-blue-600" />
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Settings size={18} className="text-primary" />
               Document Settings
             </h2>
-            <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600">
-              ✕
-            </button>
+            <Button variant="ghost" size="icon-sm" onClick={() => setShowSettings(false)}>
+              <X size={16} />
+            </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                <input 
-                  type="text" 
-                  value={settings.companyName}
-                  onChange={(e) => setSettings({...settings, companyName: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+              <div className="space-y-1">
+                <Label>Company Name</Label>
+                <Input value={settings.companyName} onChange={(e) => setSettings({...settings, companyName: e.target.value})} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                <input 
-                  type="text" 
-                  value={settings.companyAddress}
-                  onChange={(e) => setSettings({...settings, companyAddress: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+              <div className="space-y-1">
+                <Label>Address</Label>
+                <Input value={settings.companyAddress} onChange={(e) => setSettings({...settings, companyAddress: e.target.value})} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Info</label>
-                <input 
-                  type="text" 
-                  value={settings.companyContact}
-                  onChange={(e) => setSettings({...settings, companyContact: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+              <div className="space-y-1">
+                <Label>Contact Info</Label>
+                <Input value={settings.companyContact} onChange={(e) => setSettings({...settings, companyContact: e.target.value})} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                <input 
-                  type="text" 
-                  value={settings.companyWebsite}
-                  onChange={(e) => setSettings({...settings, companyWebsite: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+              <div className="space-y-1">
+                <Label>Website</Label>
+                <Input value={settings.companyWebsite} onChange={(e) => setSettings({...settings, companyWebsite: e.target.value})} />
               </div>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Logo Image</label>
+              <div className="space-y-1">
+                <Label>Logo Image</Label>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Image URL"
-                    value={settings.logoUrl}
-                    onChange={(e) => setSettings({...settings, logoUrl: e.target.value})}
-                    className="flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                  <label className="cursor-pointer p-2 bg-gray-100 rounded-md hover:bg-gray-200">
-                    <Upload size={20} />
+                  <Input placeholder="Image URL" value={settings.logoUrl} onChange={(e) => setSettings({...settings, logoUrl: e.target.value})} />
+                  <label className="cursor-pointer inline-flex items-center justify-center size-8 rounded-lg border border-input bg-transparent hover:bg-muted transition-colors shrink-0">
+                    <Upload size={16} />
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo')} />
                   </label>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Watermark Image</label>
+              <div className="space-y-1">
+                <Label>Watermark Image</Label>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Image URL"
-                    value={settings.watermarkUrl}
-                    onChange={(e) => setSettings({...settings, watermarkUrl: e.target.value})}
-                    className="flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                  <label className="cursor-pointer p-2 bg-gray-100 rounded-md hover:bg-gray-200">
-                    <Upload size={20} />
+                  <Input placeholder="Image URL" value={settings.watermarkUrl} onChange={(e) => setSettings({...settings, watermarkUrl: e.target.value})} />
+                  <label className="cursor-pointer inline-flex items-center justify-center size-8 rounded-lg border border-input bg-transparent hover:bg-muted transition-colors shrink-0">
+                    <Upload size={16} />
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'watermark')} />
                   </label>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Footer Statement</label>
-                <textarea 
+              <div className="space-y-1">
+                <Label>Footer Statement</Label>
+                <Textarea
                   value={settings.footerText}
                   onChange={(e) => setSettings({...settings, footerText: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                  className="min-h-24 resize-none"
                 />
               </div>
             </div>
@@ -213,85 +184,90 @@ export default function App() {
       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-8">
         {/* Editor Side - Hidden on Print */}
         <div className="flex-1 space-y-6 print:hidden">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Type size={18} className="text-blue-600" />
+              <ChartNoAxesGantt size={18} className="text-primary" />
               Project Information
             </h3>
             <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Project Name</label>
-                <input 
-                  type="text" 
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Project Name</Label>
+                <Input
                   value={project}
-                  onChange={(e) => setProject(e.target.value)}
+                  onChange={(e) => { setProject(e.target.value); setProjectError(false); }}
                   placeholder="Enter project name..."
-                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-lg font-medium"
+                  className="h-auto py-3 text-lg font-medium"
+                  aria-invalid={projectError}
                 />
+                {projectError && <p className="text-xs text-destructive">Project name is required.</p>}
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Bid Date</label>
-                <input 
-                  type="date" 
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bid Date</Label>
+                <Input
+                  type="date"
                   value={bidDate}
-                  onChange={(e) => setBidDate(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  onChange={(e) => { setBidDate(e.target.value); setBidDateError(false); }}
+                  className="h-auto py-3"
+                  aria-invalid={bidDateError}
                 />
+                {bidDateError && <p className="text-xs text-destructive">Bid date is required.</p>}
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="bg-card p-6 rounded-xl shadow-sm border border-border">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Line Items</h3>
-              <button 
-                onClick={handleAddItem}
-                className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <SquareKanban size={18} className="text-primary" />
+                Line Items
+              </h3>
+              <Button variant="ghost" size="sm" onClick={handleAddItem}>
                 <Plus size={16} />
                 Add Item
-              </button>
+              </Button>
             </div>
             
             <div className="space-y-3">
               {items.map((item) => (
-                <div key={item.id} className="flex flex-wrap md:flex-nowrap gap-2 p-3 bg-gray-50 rounded-lg group">
-                  <input 
-                    type="text" 
+                <div key={item.id} className="flex flex-wrap md:flex-nowrap gap-2 p-3 bg-muted/50 rounded-lg group">
+                  <Input
                     value={item.description}
                     onChange={(e) => handleUpdateItem(item.id, 'description', e.target.value)}
                     placeholder="Description"
-                    className="flex-1 min-w-50 px-2 py-1 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none"
+                    className="flex-1 min-w-50"
                   />
                   <div className="flex gap-2 items-center">
-                    <input 
-                      type="number" 
+                    <Input
+                      type="number"
+                      min="0"
                       value={item.quantity || ''}
-                      onChange={(e) => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handleUpdateItem(item.id, 'quantity', Math.max(0, parseFloat(e.target.value) || 0))}
                       placeholder="Qty"
-                      className="w-20 px-2 py-1 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-right"
+                      className="w-20 text-right"
                     />
-                    <input 
-                      type="text" 
+                    <Input
                       value={item.unit}
                       onChange={(e) => handleUpdateItem(item.id, 'unit', e.target.value)}
                       placeholder="Unit"
-                      className="w-16 px-2 py-1 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-center"
+                      className="w-16 text-center"
                     />
-                    <div className="flex items-center text-gray-400">$</div>
-                    <input 
-                      type="number" 
+                    <span className="text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      min="0"
                       value={item.rate || ''}
-                      onChange={(e) => handleUpdateItem(item.id, 'rate', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handleUpdateItem(item.id, 'rate', Math.max(0, parseFloat(e.target.value) || 0))}
                       placeholder="Rate"
-                      className="w-24 px-2 py-1 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-right"
+                      className="w-24 text-right"
                     />
-                    <button 
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => handleRemoveItem(item.id)}
-                      className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 size={16} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
