@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Printer, Settings, Plus, Trash2, Upload, ChartNoAxesGantt, X, Moon, Sun, SquareKanban, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,10 +48,29 @@ export default function App() {
     return false; // Default to light mode
   });
   const [draggedItem, setDraggedItem] = useState<BidItem | null>(null);
+  const isInitialThemeLoad = useRef(true);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
+    const root = document.documentElement;
+
+    if (isInitialThemeLoad.current) {
+      root.classList.toggle('dark', darkMode);
+      isInitialThemeLoad.current = false;
+      localStorage.setItem('darkMode', String(darkMode));
+      return;
+    }
+
+    root.classList.add('theme-transition');
+    root.classList.toggle('dark', darkMode);
     localStorage.setItem('darkMode', String(darkMode));
+
+    const timeoutId = window.setTimeout(() => {
+      root.classList.remove('theme-transition');
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [darkMode]);
 
   const handleAddItem = () => {
